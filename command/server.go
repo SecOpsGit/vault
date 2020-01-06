@@ -916,14 +916,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Do any custom configuration needed per backend
 	switch config.Storage.Type {
-	case "raft":
-		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
-			config.ClusterAddr = envCA
-		}
-		if len(config.ClusterAddr) == 0 {
-			c.UI.Error("Cluster address must be set when using raft storage")
-			return 1
-		}
 	case "consul":
 		if config.ServiceRegistration == nil {
 			// If Consul is configured for storage and service registration is unconfigured,
@@ -933,6 +925,14 @@ func (c *ServerCommand) Run(args []string) int {
 				Type:   "consul",
 				Config: make(map[string]string),
 			}
+		}
+	case "raft":
+		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+			config.ClusterAddr = envCA
+		}
+		if len(config.ClusterAddr) == 0 {
+			c.UI.Error("Cluster address must be set when using raft storage")
+			return 1
 		}
 	}
 
@@ -960,6 +960,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 		namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
 		allLoggers = append(allLoggers, namedSDLogger)
+
+		// Since we haven't even begun starting Vault's core yet,
+		// we know that Vault is in its pre-running state.
 		state := &sr.State{
 			VaultVersion:         version.GetVersion().VersionNumber(),
 			IsInitialized:        false,
