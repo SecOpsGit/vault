@@ -16,8 +16,8 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/serviceregistration/consul"
 	"golang.org/x/net/http2"
 )
 
@@ -161,7 +161,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 
 	if consulConf.Scheme == "https" {
 		// Use the parsed Address instead of the raw conf['address']
-		tlsClientConfig, err := consul.SetupTLSConfig(conf, consulConf.Address)
+		tlsClientConfig, err := tlsutil.SetupTLSConfig(conf, consulConf.Address)
 		if err != nil {
 			return nil, err
 		}
