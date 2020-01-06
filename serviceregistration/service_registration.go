@@ -5,14 +5,14 @@ ServiceRegistration is an interface that can be fulfilled to use
 varying applications for service discovery, regardless of the physical
 back-end used. It uses [the observer pattern](https://refactoring.guru/design-patterns/observer).
 
-Implementing the Factory is essentially how you register your implementation
-as an observer. There is no deregistration because service discovery stops
-on its own if Vault stops.
+Implementing the Factory and adding your factory to the list in commands.go
+is essentially how you register your implementation as an observer. There is
+no deregistration because service discovery stops on its own if Vault stops.
 
 Service registration implements notifications for changes in _dynamic_
 properties regarding Vault's help. Vault's version is the only static
-property given in state and notifications for now, but if there's a need
-for more in the future, we could add them on.
+property given in state for now, but if there's a need for more in the future,
+we could add them on.
  */
 
 import (
