@@ -2,26 +2,22 @@ package consul
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/serviceregistration/consul"
 	"golang.org/x/net/http2"
 )
 
@@ -165,7 +161,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 
 	if consulConf.Scheme == "https" {
 		// Use the parsed Address instead of the raw conf['address']
-		tlsClientConfig, err := setupTLSConfig(conf, consulConf.Address)
+		tlsClientConfig, err := consul.SetupTLSConfig(conf, consulConf.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -421,72 +417,4 @@ func (c *ConsulLock) Value() (bool, string, error) {
 	held := pair.Session != ""
 	value := string(pair.Value)
 	return held, value, nil
-}
-
-func setupTLSConfig(conf map[string]string, address string) (*tls.Config, error) {
-	serverName, _, err := net.SplitHostPort(address)
-	switch {
-	case err == nil:
-	case strings.Contains(err.Error(), "missing port"):
-		serverName = conf["address"]
-	default:
-		return nil, err
-	}
-
-	insecureSkipVerify := false
-	tlsSkipVerify, ok := conf["tls_skip_verify"]
-
-	if ok && tlsSkipVerify != "" {
-		b, err := parseutil.ParseBool(tlsSkipVerify)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing tls_skip_verify parameter: {{err}}", err)
-		}
-		insecureSkipVerify = b
-	}
-
-	tlsMinVersionStr, ok := conf["tls_min_version"]
-	if !ok {
-		// Set the default value
-		tlsMinVersionStr = "tls12"
-	}
-
-	tlsMinVersion, ok := tlsutil.TLSLookup[tlsMinVersionStr]
-	if !ok {
-		return nil, fmt.Errorf("invalid 'tls_min_version'")
-	}
-
-	tlsClientConfig := &tls.Config{
-		MinVersion:         tlsMinVersion,
-		InsecureSkipVerify: insecureSkipVerify,
-		ServerName:         serverName,
-	}
-
-	_, okCert := conf["tls_cert_file"]
-	_, okKey := conf["tls_key_file"]
-
-	if okCert && okKey {
-		tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])
-		if err != nil {
-			return nil, errwrap.Wrapf("client tls setup failed: {{err}}", err)
-		}
-
-		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
-	}
-
-	if tlsCaFile, ok := conf["tls_ca_file"]; ok {
-		caPool := x509.NewCertPool()
-
-		data, err := ioutil.ReadFile(tlsCaFile)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to read CA file: {{err}}", err)
-		}
-
-		if !caPool.AppendCertsFromPEM(data) {
-			return nil, fmt.Errorf("failed to parse CA certificate")
-		}
-
-		tlsClientConfig.RootCAs = caPool
-	}
-
-	return tlsClientConfig, nil
 }

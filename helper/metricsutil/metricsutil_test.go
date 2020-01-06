@@ -1,9 +1,8 @@
 package metricsutil
 
 import (
-	"testing"
-
 	"github.com/hashicorp/vault/sdk/logical"
+	"testing"
 )
 
 func TestFormatFromRequest(t *testing.T) {

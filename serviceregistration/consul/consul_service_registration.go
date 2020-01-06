@@ -54,8 +54,6 @@ const (
 
 type notifyEvent struct{}
 
-var _ sr.ServiceRegistration = (*ConsulServiceRegistration)(nil)
-
 var (
 	hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 )
@@ -183,7 +181,7 @@ func NewConsulServiceRegistration(conf map[string]string, logger log.Logger) (sr
 
 	if consulConf.Scheme == "https" {
 		// Use the parsed Address instead of the raw conf['address']
-		tlsClientConfig, err := setupTLSConfig(conf, consulConf.Address)
+		tlsClientConfig, err := SetupTLSConfig(conf, consulConf.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -219,7 +217,7 @@ func NewConsulServiceRegistration(conf map[string]string, logger log.Logger) (sr
 	return c, nil
 }
 
-func setupTLSConfig(conf map[string]string, address string) (*tls.Config, error) {
+func SetupTLSConfig(conf map[string]string, address string) (*tls.Config, error) {
 	serverName, _, err := net.SplitHostPort(address)
 	switch {
 	case err == nil:
