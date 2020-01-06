@@ -10,7 +10,7 @@ type State struct {
 }
 
 // Factory is the factory function to create a ServiceRegistration.
-type Factory func(config map[string]string, logger log.Logger, state *State) (ServiceRegistration, error)
+type Factory func(shutdownCh <-chan struct{}, config map[string]string, logger log.Logger, state *State, redirectAddr string) (ServiceRegistration, error)
 
 // ServiceRegistration is an interface that advertises the state of Vault to a
 // service discovery network.

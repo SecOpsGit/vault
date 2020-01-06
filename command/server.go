@@ -967,7 +967,7 @@ func (c *ServerCommand) Run(args []string) int {
 			IsDRStandby:          false,
 			IsPerformanceStandby: false,
 		}
-		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger, state)
+		configSR, err = sdFactory(c.ShutdownCh, config.ServiceRegistration.Config, namedSDLogger, state, config.Storage.RedirectAddr)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err))
 			return 1
