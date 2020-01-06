@@ -289,7 +289,7 @@ func setupTLSConfig(conf map[string]string, address string) (*tls.Config, error)
 	return tlsClientConfig, nil
 }
 
-func (c *ConsulServiceRegistration) NotifyActiveStateChange() error {
+func (c *ConsulServiceRegistration) NotifyDRStandbyStateChange() error {
 	select {
 	case c.notifyActiveCh <- notifyEvent{}:
 	default:

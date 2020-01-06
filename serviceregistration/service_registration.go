@@ -1,40 +1,34 @@
 package serviceregistration
 
 import (
-	"sync"
-
 	log "github.com/hashicorp/go-hclog"
 )
 
+type State struct {
+	VaultVersion                                               string
+	IsInitialized, IsSealed, IsDRStandby, IsPerformanceStandby bool
+}
+
 // Factory is the factory function to create a ServiceRegistration.
-type Factory func(config map[string]string, logger log.Logger) (ServiceRegistration, error)
+type Factory func(config map[string]string, logger log.Logger, state *State) (ServiceRegistration, error)
 
 // ServiceRegistration is an interface that advertises the state of Vault to a
 // service discovery network.
 type ServiceRegistration interface {
-	// NotifyActiveStateChange is used by Core to notify that this Vault
-	// instance has changed its status to active or standby.
-	NotifyActiveStateChange() error
+	// NotifyDRStandbyStateChange is used by Core to notify that this Vault
+	// instance has changed its status on whether it's the leader or is
+	// a standby.
+	NotifyDRStandbyStateChange(isLeader bool) error
 
 	// NotifySealedStateChange is used by Core to notify that Vault has changed
 	// its Sealed status to sealed or unsealed.
-	NotifySealedStateChange() error
+	NotifySealedStateChange(isSealed bool) error
 
 	// NotifyPerformanceStandbyStateChange is used by Core to notify that this
-	// Vault instance has changed it status to performance standby or standby.
-	NotifyPerformanceStandbyStateChange() error
+	// Vault instance has changed it status to performance leader or standby.
+	NotifyPerformanceStandbyStateChange(isLeader bool) error
 
-	// Run executes any background service discovery tasks until the
-	// shutdown channel is closed.
-	RunServiceRegistration(
-		waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string,
-		activeFunc ActiveFunction, sealedFunc SealedFunction, perfStandbyFunc PerformanceStandbyFunction) error
+	// NotifyInitializedStateChange is used by Core to notify that the core is
+	// initialized.
+	NotifyInitializedStateChange(isInitialized bool) error
 }
-
-// Callback signatures for RunServiceRegistration
-type ActiveFunction func() bool
-type SealedFunction func() bool
-type PerformanceStandbyFunction func() bool
-
-// ShutdownChannel is the shutdown signal for RunServiceRegistration
-type ShutdownChannel chan struct{}

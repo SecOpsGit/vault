@@ -914,14 +914,25 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	if config.Storage.Type == "raft" {
+	// Do any custom configuration needed per backend
+	switch config.Storage.Type {
+	case "raft":
 		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
 			config.ClusterAddr = envCA
 		}
-
 		if len(config.ClusterAddr) == 0 {
 			c.UI.Error("Cluster address must be set when using raft storage")
 			return 1
+		}
+	case "consul":
+		if config.ServiceRegistration == nil {
+			// If Consul is configured for storage and service registration is unconfigured,
+			// use Consul for service registration without requiring additional configuration.
+			// This maintains backward-compatibility.
+			config.ServiceRegistration = &server.ServiceRegistration{
+				Type:   "consul",
+				Config: make(map[string]string),
+			}
 		}
 	}
 
@@ -949,7 +960,14 @@ func (c *ServerCommand) Run(args []string) int {
 
 		namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
 		allLoggers = append(allLoggers, namedSDLogger)
-		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger)
+		state := &sr.State{
+			VaultVersion:         version.GetVersion().VersionNumber(),
+			IsInitialized:        false,
+			IsSealed:             true,
+			IsDRStandby:          false,
+			IsPerformanceStandby: false,
+		}
+		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger, state)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err))
 			return 1
@@ -1501,20 +1519,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Instantiate the wait group
 	c.WaitGroup = &sync.WaitGroup{}
-
-	// If service discovery is available, run service discovery
-	if disc := coreConfig.GetServiceRegistration(); disc != nil {
-		activeFunc := func() bool {
-			if isLeader, _, _, err := core.Leader(); err == nil {
-				return isLeader
-			}
-			return false
-		}
-		if err := disc.RunServiceRegistration(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, core.Sealed, core.PerfStandby); err != nil {
-			c.UI.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
-			return 1
-		}
-	}
 
 	// If we're in Dev mode, then initialize the core
 	if c.flagDev && !c.flagDevSkipInit {

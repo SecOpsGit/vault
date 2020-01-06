@@ -65,7 +65,7 @@ import (
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 
 	sr "github.com/hashicorp/vault/serviceregistration"
-	csr "github.com/hashicorp/vault/serviceregistration/consul"
+	//csr "github.com/hashicorp/vault/serviceregistration/consul"
 )
 
 const (
@@ -161,7 +161,7 @@ var (
 	}
 
 	serviceRegistrations = map[string]sr.Factory{
-		"consul": csr.NewConsulServiceRegistration,
+		//"consul": csr.NewConsulServiceRegistration,
 	}
 )
 
