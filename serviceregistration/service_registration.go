@@ -10,10 +10,10 @@ is essentially how you register your implementation as an observer. There is
 no deregistration because service discovery stops on its own if Vault stops.
 
 Service registration implements notifications for changes in _dynamic_
-properties regarding Vault's help. Vault's version is the only static
+properties regarding Vault's health. Vault's version is the only static
 property given in state for now, but if there's a need for more in the future,
 we could add them on.
- */
+*/
 
 import (
 	log "github.com/hashicorp/go-hclog"
