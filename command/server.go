@@ -923,7 +923,7 @@ func (c *ServerCommand) Run(args []string) int {
 			// This maintains backward-compatibility.
 			config.ServiceRegistration = &server.ServiceRegistration{
 				Type:   "consul",
-				Config: make(map[string]string),
+				Config: config.Storage.Config,
 			}
 		}
 	case "raft":

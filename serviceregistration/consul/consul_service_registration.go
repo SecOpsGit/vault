@@ -204,6 +204,11 @@ func NewConsulServiceRegistration(shutdownCh <-chan struct{}, conf map[string]st
 		return nil, err
 	}
 
+	// Do an initial reconciliation to register Vault with Consul.
+	if err := c.reconcileConsul(); err != nil {
+		return nil, err
+	}
+
 	go c.RunOngoingReconciliations(shutdownCh)
 	go c.RunOngoingChecks(shutdownCh, checkTimeout)
 	go c.DeregisterOnShutdown(shutdownCh)
@@ -217,6 +222,9 @@ func (c *ConsulServiceRegistration) RunOngoingReconciliations(shutdownCh <-chan 
 		case <-shutdownCh:
 			return
 		case <-time.After(reconcileTimeout):
+			if c.logger.IsDebug() {
+				c.logger.Debug("reconciling")
+			}
 			if err := c.reconcileConsul(); err != nil {
 				if c.logger.IsWarn() {
 					c.logger.Warn(fmt.Sprintf("unable to reconcile consul: %s", err))
@@ -232,6 +240,9 @@ func (c *ConsulServiceRegistration) RunOngoingChecks(shutdownCh <-chan struct{},
 		case <-shutdownCh:
 			return
 		case <-time.After(addJitter(checkTimeout)):
+			if c.logger.IsDebug() {
+				c.logger.Debug("checking")
+			}
 			if err := c.runCheck(); err != nil {
 				if c.logger.IsWarn() {
 					c.logger.Warn(fmt.Sprintf("unable to check consul: %s", err))
@@ -252,6 +263,9 @@ func addJitter(checkTimeout time.Duration) time.Duration {
 }
 
 func (c *ConsulServiceRegistration) NotifyDRStandbyStateChange(isLeader bool) error {
+	if c.logger.IsDebug() {
+		c.logger.Debug(fmt.Sprintf("received NotifyDRStandbyStateChange isLeader: %v", isLeader))
+	}
 	c.stateLock.Lock()
 	c.state.IsDRStandby = !isLeader
 	c.stateLock.Unlock()
@@ -259,6 +273,9 @@ func (c *ConsulServiceRegistration) NotifyDRStandbyStateChange(isLeader bool) er
 }
 
 func (c *ConsulServiceRegistration) NotifyPerformanceStandbyStateChange(isLeader bool) error {
+	if c.logger.IsDebug() {
+		c.logger.Debug(fmt.Sprintf("received NotifyPerformanceStandbyStateChange isLeader: %v", isLeader))
+	}
 	c.stateLock.Lock()
 	c.state.IsPerformanceStandby = !isLeader
 	c.stateLock.Unlock()
@@ -266,6 +283,9 @@ func (c *ConsulServiceRegistration) NotifyPerformanceStandbyStateChange(isLeader
 }
 
 func (c *ConsulServiceRegistration) NotifySealedStateChange(isSealed bool) error {
+	if c.logger.IsDebug() {
+		c.logger.Debug(fmt.Sprintf("received NotifySealedStateChange isSealed: %v", isSealed))
+	}
 	c.stateLock.Lock()
 	c.state.IsSealed = isSealed
 	c.stateLock.Unlock()
@@ -273,10 +293,13 @@ func (c *ConsulServiceRegistration) NotifySealedStateChange(isSealed bool) error
 }
 
 func (c *ConsulServiceRegistration) NotifyInitializedStateChange(isInitialized bool) error {
+	if c.logger.IsDebug() {
+		c.logger.Debug(fmt.Sprintf("received NotifyInitializedStateChange isSealed: %v", isInitialized))
+	}
 	c.stateLock.Lock()
 	c.state.IsInitialized = isInitialized
 	c.stateLock.Unlock()
-	return c.runCheck() // TODO is this the right thing to do here?
+	return c.runCheck()
 }
 
 func (c *ConsulServiceRegistration) DeregisterOnShutdown(shutdownCh <-chan struct{}) {
